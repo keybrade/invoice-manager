@@ -112,7 +112,7 @@ if file_dir:
 
     # 输出每个项目类型对应的浮点数之和和文件数量
     for proj_type, data in total_dict.items():
-        line = f"{proj_type}: {data['total']} ({data['count']} files)"
+        line = f"{proj_type}: {round(data['total'], 2)} ({data['count']} files)"
         report.append(line)
         print(line)
 
