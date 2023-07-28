@@ -1,7 +1,8 @@
 import os
+import itertools
+import tkinter as tk
 from tkinter import filedialog
 from datetime import datetime
-import itertools
 
 
 # Function to move files to a subfolder
@@ -28,17 +29,19 @@ def move_files_to_subfolder(file_list, folder_path, report):
         f.close()
 
 
-# Function to calculate the absolute difference between two numbers
-def absolute_difference(a, b):
-    return abs(a - b)
+filename_amount = {}
 
 
 # combo is a list of file, filter the pdf files, and split filename using '-', the second part should be float, do the sum of all them
 def sum_combination(combo):
     sum = 0
     for file in combo:
-        if file.endswith(".pdf"):
-            sum += float(file.split("-")[1].replace(".pdf", "").strip())
+        if file in filename_amount:
+            sum += filename_amount[file]
+        else:
+            sum += filename_amount.setdefault(
+                file, float(file.split("-")[1].replace(".pdf", "").strip())
+            )
     return sum
 
 
@@ -50,20 +53,24 @@ def find_closest_combination(file_list, target_amount):
     # Generate all possible combinations of files
     for r in range(1, len(file_list) + 1):
         combinations = itertools.combinations(file_list, r)
-
         # Iterate through each combination
         for combination in combinations:
             total = sum_combination(combination)
-            difference = absolute_difference(total, target_amount)
+            difference = abs(total - target_amount)
             # print(combination, total, difference)
 
             # Update the closest combination if the difference is smaller
             if difference < min_difference:
                 closest_combination = combination
                 min_difference = difference
-
+                # 提供最小差值范围，避免过度查找
+                if difference / target_amount < 0.01:
+                    return closest_combination
     return closest_combination
 
+
+root = tk.Tk()
+root.withdraw()
 
 # 创建GUI窗口并让用户选择文件夹
 file_dir = filedialog.askdirectory()
@@ -78,32 +85,29 @@ if file_dir:
     target_amount = float(input("Enter the target amount: "))
     combination = find_closest_combination(files, target_amount)
     # print each file in combination
-    # for file in combination:
-    #     print(file)
-    # print(sum_combination(combination))
+    for file in combination:
+        print(file)
+    print(sum_combination(combination))
 
     # 定义字典，用于存储每个项目类型对应的浮点数之和
     total_dict = {}
 
     # 遍历文件列表
     for file_name in combination:
-        if file_name.endswith(".pdf"):  # 如果文件名以.pdf结尾
-            name_parts = file_name.split("-")  # 将文件名按照"-"分割
-            if len(name_parts) == 2:  # 如果成功分割成两部分
-                proj_type = name_parts[0].strip()  # 第一部分是项目类型
-                try:
-                    float_num = float(
-                        name_parts[1].replace(".pdf", "").strip()
-                    )  # 第二部分是浮点数
-                except ValueError:  # 如果无法将第二部分转换为浮点数，则跳过
-                    continue
-                if proj_type in total_dict:  # 如果这个项目类型已经在字典中
-                    # 将这个浮点数加到之前的值上
-                    total_dict[proj_type]["total"] += float_num
-                    total_dict[proj_type]["count"] += 1  # 文件数量加1
-                else:
-                    # 如果这个项目类型还没有出现过，则将其加入字典
-                    total_dict[proj_type] = {"total": float_num, "count": 1}
+        name_parts = file_name.split("-")  # 将文件名按照"-"分割
+        if len(name_parts) == 2:  # 如果成功分割成两部分
+            proj_type = name_parts[0].strip()  # 第一部分是项目类型
+            try:
+                float_num = float(name_parts[1].replace(".pdf", "").strip())  # 第二部分是浮点数
+            except ValueError:  # 如果无法将第二部分转换为浮点数，则跳过
+                continue
+            if proj_type in total_dict:  # 如果这个项目类型已经在字典中
+                # 将这个浮点数加到之前的值上
+                total_dict[proj_type]["total"] += float_num
+                total_dict[proj_type]["count"] += 1  # 文件数量加1
+            else:
+                # 如果这个项目类型还没有出现过，则将其加入字典
+                total_dict[proj_type] = {"total": float_num, "count": 1}
     report = []
 
     # 输出每个项目类型对应的浮点数之和和文件数量
